@@ -1,0 +1,205 @@
+"""To'lov (Payment) oqimi: mijoz yoki yetkazib beruvchi -> (ixtiyoriy) qarzli
+sotuv/xaridga bog'lash -> summa -> to'lov turi -> sana -> izoh -> tasdiqlash.
+
+`apps/payments/services/payment_service.py::create_payment()` chaqiriladi —
+tegishli Sale/Purchase qarzini qayta hisoblash va (naqd bo'lsa) kassa
+effektini qo'llash shu servis ichida, o'zgarishsiz. "Bekor qilish" esa
+website'dagi kabi `delete_payment()` — Payment qatori HAQIQATDA o'chiriladi
+(faqat kassa effekti reversing yozuv bilan tuzatiladi), boshqa hujjatlardagi
+kabi soft-cancel EMAS."""
+from decimal import Decimal
+
+from django.core.exceptions import ValidationError
+
+from apps.bot import choices, keyboards
+from apps.bot.bot_instance import bot
+from apps.bot.formatters import date_fmt, errors_to_text, som
+from apps.bot.handlers.common import register_menu
+from apps.bot.inputs import is_skip, parse_decimal
+from apps.bot.links import customer_link, supplier_link
+from apps.bot.pickers import register_calendar, register_pagination, send_calendar, send_picker
+from apps.bot.state import register_callback, register_state, set_state
+from apps.payments.models import Payment
+from apps.payments.services import payment_service
+
+register_pagination('pay_cust', choices.active_customers)
+register_pagination('pay_sup', choices.active_suppliers)
+register_pagination('pay_ptype', choices.cash_registers)
+
+
+@register_menu(keyboards.MENU_PAYMENTS)
+def payments_menu(message, tg_user):
+    from telebot import types
+    kb = types.InlineKeyboardMarkup()
+    kb.row(types.InlineKeyboardButton('👥 Mijozdan to\'lov', callback_data='paynew:customer:IN'))
+    kb.row(types.InlineKeyboardButton('🚚 Yetkazib beruvchiga to\'lov', callback_data='paynew:supplier:OUT'))
+    kb.row(types.InlineKeyboardButton('🚚 Yetkazib beruvchidan pul olish', callback_data='paynew:supplier:IN'))
+    kb.row(types.InlineKeyboardButton('👥 Mijozga pul qaytarish', callback_data='paynew:customer:OUT'))
+    kb.row(types.InlineKeyboardButton("📋 So'nggi to'lovlar", callback_data='paylist:0'))
+    bot.send_message(message.chat.id, "To'lov bo'limi:", reply_markup=kb)
+
+
+@register_callback('paynew')
+def start_payment(call, tg_user):
+    parts = call.data.split(':')
+    party_type = parts[1]
+    # Yo'nalish tugmaning o'zida keladi; ko'rsatilmasa odatdagisi olinadi
+    # (mijozdan olamiz, yetkazib beruvchiga to'laymiz).
+    direction = parts[2] if len(parts) > 2 else ('IN' if party_type == 'customer' else 'OUT')
+    bot.answer_callback_query(call.id)
+    set_state(tg_user, 'pay.picking_party', party_type=party_type, direction=direction)
+    if party_type == 'customer':
+        send_picker(call.message.chat.id, 'pay_cust', choices.active_customers(), 'Mijozni tanlang:')
+    else:
+        send_picker(call.message.chat.id, 'pay_sup', choices.active_suppliers(), 'Yetkazib beruvchini tanlang:')
+
+
+@register_callback('pay_cust')
+def pick_party_customer(call, tg_user):
+    customer_id = int(call.data.split(':', 1)[1])
+    from apps.customers.models import Customer
+    customer = Customer.objects.get(pk=customer_id)
+    bot.answer_callback_query(call.id, customer.name)
+    set_state(tg_user, 'pay.picking_doc', party_id=customer_id, party_name=customer.name)
+    items = choices.confirmed_sales_with_debt(customer_id) + [(0, "Umumiy to'lov (sotuvga bog'lamasdan)")]
+    send_picker(call.message.chat.id, 'pay_doc', items, "Qarzli sotuvga bog'laysizmi?")
+
+
+@register_callback('pay_sup')
+def pick_party_supplier(call, tg_user):
+    supplier_id = int(call.data.split(':', 1)[1])
+    from apps.suppliers.models import Supplier
+    supplier = Supplier.objects.get(pk=supplier_id)
+    bot.answer_callback_query(call.id, supplier.name)
+    set_state(tg_user, 'pay.picking_doc', party_id=supplier_id, party_name=supplier.name)
+    items = choices.confirmed_purchases_with_debt(supplier_id) + [(0, "Umumiy to'lov (xaridga bog'lamasdan)")]
+    send_picker(call.message.chat.id, 'pay_doc', items, "Qarzli xaridga bog'laysizmi?")
+
+
+@register_callback('pay_doc')
+def pick_doc(call, tg_user):
+    doc_id = int(call.data.split(':', 1)[1])
+    bot.answer_callback_query(call.id)
+    set_state(tg_user, 'pay.amount', doc_id=(doc_id or None))
+    bot.send_message(call.message.chat.id, "To'lov summasi?", reply_markup=keyboards.cancel_only())
+
+
+@register_state('pay.amount')
+def on_amount(message, tg_user):
+    amount = parse_decimal(message.text)
+    if amount is None or amount <= 0:
+        bot.send_message(message.chat.id, "Summa musbat bolishi kerak. Qayta kiriting:")
+        return
+    set_state(tg_user, 'pay.picking_type', amount=str(amount))
+    send_picker(message.chat.id, 'pay_ptype', choices.cash_registers(), "Qaysi kassa?")
+
+
+@register_callback('pay_ptype')
+def pick_payment_type(call, tg_user):
+    code = call.data.split(':', 1)[1]
+    bot.answer_callback_query(call.id)
+    set_state(tg_user, 'pay.date', payment_type=code)
+    send_calendar(call.message.chat.id, 'pay_date', 'Sana?')
+
+
+def _on_date_picked(call, tg_user, picked):
+    set_state(tg_user, 'pay.notes', date=picked.isoformat())
+    bot.send_message(call.message.chat.id, 'Izoh? (ixtiyoriy)', reply_markup=keyboards.cancel_and_skip())
+
+
+register_calendar('pay_date', _on_date_picked)
+
+
+@register_state('pay.notes')
+def on_notes(message, tg_user):
+    notes = '' if is_skip(message.text) else message.text.strip()
+    set_state(tg_user, 'pay.confirm', notes=notes)
+    _send_confirm(message.chat.id, tg_user)
+
+
+def _send_confirm(chat_id, tg_user):
+    data = tg_user.data
+    party_label = 'Mijoz' if data['party_type'] == 'customer' else 'Yetkazib beruvchi'
+    incoming = data.get('direction', 'IN') == 'IN'
+    lines = [
+        f'{party_label}: {data["party_name"]}',
+        f"Yo'nalish: {'⬅️ Pul bizga keldi' if incoming else '➡️ Pul bizdan ketdi'}",
+        f"Summa: {som(data['amount'])}",
+        f"Kassa: {dict(choices.cash_registers()).get(data['payment_type'], data['payment_type'])}",
+        f"Sana: {date_fmt(data['date'])}",
+    ]
+    if data.get('notes'):
+        lines.append(f"Izoh: {data['notes']}")
+    lines.append('')
+    lines.append('Tasdiqlaysizmi?')
+    bot.send_message(chat_id, '\n'.join(lines), reply_markup=keyboards.confirm_cancel_inline('payconfirm:1'))
+
+
+@register_callback('payconfirm')
+def confirm_payment(call, tg_user):
+    bot.answer_callback_query(call.id, 'Yuborildi...')
+    data = tg_user.data
+    user = tg_user.django_user
+
+    try:
+        from apps.customers.models import Customer
+        from apps.purchases.models import Purchase
+        from apps.sales.models import Sale
+        from apps.suppliers.models import Supplier
+
+        customer = supplier = sale = purchase = None
+        if data['party_type'] == 'customer':
+            customer = Customer.objects.get(pk=data['party_id'])
+            if data.get('doc_id'):
+                sale = Sale.objects.get(pk=data['doc_id'])
+        else:
+            supplier = Supplier.objects.get(pk=data['party_id'])
+            if data.get('doc_id'):
+                purchase = Purchase.objects.get(pk=data['doc_id'])
+
+        payment = payment_service.create_payment(
+            amount=Decimal(data['amount']), payment_type=data['payment_type'], date=data['date'],
+            direction=data.get('direction'), notes=data.get('notes', ''), user=user,
+            customer=customer, supplier=supplier, sale=sale, purchase=purchase,
+        )
+        tg_user.reset_state()
+        bot.send_message(
+            call.message.chat.id, f"✅ To'lov qo'shildi: {som(payment.amount)}",
+            reply_markup=keyboards.main_menu(),
+        )
+    except ValidationError as exc:
+        tg_user.reset_state()
+        bot.send_message(
+            call.message.chat.id, f"❌ Xatolik:\n{errors_to_text(exc)}",
+            reply_markup=keyboards.main_menu(),
+        )
+
+
+@register_callback('paylist')
+def list_payments(call, tg_user):
+    bot.answer_callback_query(call.id)
+    payments = Payment.objects.select_related('customer', 'supplier', 'sale', 'purchase').all()[:10]
+    if not payments:
+        bot.send_message(call.message.chat.id, "Hozircha to'lovlar yo'q.")
+        return
+    for p in payments:
+        party = customer_link(p.customer) if p.customer else supplier_link(p.supplier)
+        arrow = '⬅️' if p.is_incoming else '➡️'
+        text = f"{arrow} {party} — {som(p.amount)} ({p.get_payment_type_display()})\n{date_fmt(p.date)}"
+        from telebot import types
+        kb = types.InlineKeyboardMarkup()
+        kb.row(types.InlineKeyboardButton('❌ Bekor qilish (o\'chirish)', callback_data=f'paycancel:{p.pk}'))
+        bot.send_message(call.message.chat.id, text, reply_markup=kb)
+
+
+@register_callback('paycancel')
+def cancel_payment_cb(call, tg_user):
+    payment_id = int(call.data.split(':', 1)[1])
+    payment = Payment.objects.get(pk=payment_id)
+    try:
+        payment_service.delete_payment(payment, user=tg_user.django_user)
+        bot.answer_callback_query(call.id, "To'lov o'chirildi.")
+        bot.send_message(call.message.chat.id, "✅ To'lov o'chirildi.")
+    except ValidationError as exc:
+        bot.answer_callback_query(call.id, 'Xatolik!', show_alert=True)
+        bot.send_message(call.message.chat.id, f'❌ {errors_to_text(exc)}')

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="a" cx="15%" cy="10%" r="70%"><stop offset="0" stop-color="#2DD4BF" stop-opacity=".45"/><stop offset="1" stop-color="#2DD4BF" stop-opacity="0"/></radialGradient>
+    <radialGradient id="b" cx="90%" cy="95%" r="60%"><stop offset="0" stop-color="#F59E0B" stop-opacity=".22"/><stop offset="1" stop-color="#F59E0B" stop-opacity="0"/></radialGradient>
+    <linearGradient id="mz" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2DD4BF"/><stop offset="1" stop-color="#0F766E"/></linearGradient>
+  </defs>
+  <rect width="800" height="1000" fill="#0B1E22"/>
+  <rect width="800" height="1000" fill="url(#a)"/>
+  <rect width="800" height="1000" fill="url(#b)"/>
+  <g transform="translate(304 404) scale(3)">
+    <rect width="64" height="64" rx="16" fill="url(#mz)"/>
+    <g fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M32 15v32M22 48h20M14 21h36M14 21l-6 13M14 21l6 13M50 21l-6 13M50 21l6 13"/></g>
+    <g fill="#fff"><path d="M7 34h14a7 7 0 0 1-14 0zM43 34h14a7 7 0 0 1-14 0z"/><circle cx="32" cy="14" r="3"/></g>
+  </g>
+</svg>

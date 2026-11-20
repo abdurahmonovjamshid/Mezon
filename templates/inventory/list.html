@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% load uz_numbers %}
+{% block title %}Ombor{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h4 class="mb-0"><i class="bi bi-boxes"></i> Ombor</h4>
+    <div>
+        <a href="{% url 'inventory:export' %}" class="btn btn-outline-success">Excel eksport</a>
+        <a href="{% url 'inventory:import' %}" class="btn btn-outline-success">Excel import</a>
+        <a href="{% url 'inventory:transfer_list' %}" class="btn btn-outline-primary">Ko'chirishlar</a>
+        <a href="{% url 'inventory:transfer_create' %}" class="btn btn-primary">+ Ko'chirish</a>
+        <a href="{% url 'inventory:count_list' %}" class="btn btn-outline-primary">Inventarizatsiyalar</a>
+    </div>
+</div>
+
+<ul class="nav nav-tabs mb-3" id="invTabs" role="tablist">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#stock-tab" type="button">Qoldiq</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#movements-tab" type="button">Harakatlar tarixi</button></li>
+</ul>
+
+<div class="tab-content">
+    <div class="tab-pane fade show active" id="stock-tab">
+        <div class="card table-card">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead><tr><th></th><th>Mahsulot</th><th>Kategoriya</th>{% for w in warehouses %}<th class="text-end">{{ w.name }} (kg)</th>{% endfor %}<th class="text-end">Jami qoldiq (kg)</th><th class="text-end">Qoldiq (dona)</th><th class="text-end">O'rtacha tannarx</th></tr></thead>
+                    <tbody>
+                    {% for row in stock_rows %}
+                        <tr class="{% if row.quantity <= 0 %}text-muted{% endif %}">
+                            <td>{% include "partials/product_thumb.html" with product=row.product %}</td>
+                            <td>{{ row.product.name }}{% if row.product.min_stock is not None and row.quantity <= row.product.min_stock %} <span class="badge text-bg-warning" title="Minimal qoldiq: {{ row.product.min_stock|uzqty }} kg"><i class="bi bi-exclamation-triangle"></i> Kam</span>{% endif %}</td>
+                            <td>{{ row.product.category.name }}</td>
+                            {% for qty in row.by_warehouse %}<td class="text-end">{{ qty|uzqty }}</td>{% endfor %}
+                            <td class="text-end {% if row.quantity <= 0 %}text-danger{% endif %}">{{ row.quantity|uzqty }} kg</td>
+                            <td class="text-end">{{ row.pieces }} dona</td>
+                            <td class="text-end">{{ row.avg_cost|uzsum }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="{{ warehouses|length|add:6 }}" class="text-center text-muted py-4">Mahsulot yo'q.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="movements-tab">
+        <form method="get" class="row g-2 mb-3">
+            <div class="col-12 col-md-auto">
+                <select name="product" class="form-select">
+                    <option value="">Barcha mahsulot</option>
+                    {% for p in products %}
+                        <option value="{{ p.id }}" {% if request.GET.product == p.id|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-auto">
+                <select name="movement_type" class="form-select">
+                    <option value="">Barcha turi</option>
+                    {% for code, label in movement_types %}
+                        <option value="{{ code }}" {% if request.GET.movement_type == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-auto">
+                <select name="warehouse" class="form-select">
+                    <option value="">Barcha omborlar</option>
+                    {% for w in warehouses %}
+                        <option value="{{ w.id }}" {% if request.GET.warehouse == w.id|stringformat:"s" %}selected{% endif %}>{{ w.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-auto"><button class="btn btn-outline-secondary" type="submit">Filtr</button></div>
+        </form>
+        <div class="card table-card">
+            <div class="table-responsive">
+                <table class="table mb-0 align-middle">
+                    <thead><tr><th></th><th>Sana</th><th>Mahsulot</th><th>Ombor</th><th>Turi</th><th>Yo'nalish</th><th class="text-end">Miqdor (kg)</th><th class="text-end">Soni (dona)</th><th class="text-end">Tannarx</th><th>Havola</th></tr></thead>
+                    <tbody>
+                    {% for m in movements %}
+                        <tr>
+                            <td>{% include "partials/product_thumb.html" with product=m.product %}</td>
+                            <td>{{ m.date|date:"d.m.Y" }}</td>
+                            <td>{{ m.product.name }}</td>
+                            <td>{{ m.warehouse.name }}</td>
+                            <td>{{ m.get_movement_type_display }}</td>
+                            <td>{% if m.direction == 'IN' %}<span class="text-success">Kirim</span>{% else %}<span class="text-danger">Chiqim</span>{% endif %}</td>
+                            <td class="text-end">{{ m.quantity|uzqty }}</td>
+                            <td class="text-end">{{ m.pieces }}</td>
+                            <td class="text-end">{{ m.unit_cost|uzsum }}</td>
+                            <td class="small text-muted">{{ m.reference }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="10" class="text-center text-muted py-4">Harakat yo'q.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

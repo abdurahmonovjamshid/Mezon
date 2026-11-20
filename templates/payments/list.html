@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% load uz_numbers %}
+{% block title %}To'lovlar{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">To'lovlar</h4>
+    <a href="{% url 'payments:create' %}" class="btn btn-primary">+ Yangi to'lov</a>
+</div>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-12 col-md-auto"><input type="date" name="date_from" class="form-control" value="{{ date_from }}"></div>
+    <div class="col-12 col-md-auto"><input type="date" name="date_to" class="form-control" value="{{ date_to }}"></div>
+    <div class="col-12 col-md-auto">
+        <select name="payment_type" class="form-select">
+            <option value="">Barcha turi</option>
+            {% for code, label in payment_types %}
+                <option value="{{ code }}" {% if request.GET.payment_type == code %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-12 col-md-auto">
+        <select name="direction" class="form-select">
+            <option value="">Barcha yo'nalish</option>
+            {% for code, label in directions %}
+                <option value="{{ code }}" {% if request.GET.direction == code %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-12 col-md-auto"><button class="btn btn-outline-secondary" type="submit">Filtr</button></div>
+    <div class="col-12 col-md-auto"><a href="?all=1" class="btn btn-outline-secondary">Barchasi</a></div>
+</form>
+
+<div class="card table-card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead><tr><th>Sana</th><th>Yo'nalish</th><th>Kimga/kimdan</th><th>Turi</th><th>Bog'liq</th><th class="text-end">Summa</th><th></th></tr></thead>
+            <tbody>
+            {% for p in payments %}
+                <tr>
+                    <td>{{ p.date|date:"d.m.Y" }}</td>
+                    <td>
+                        {% if p.is_incoming %}
+                            <span class="badge bg-success-subtle text-success-emphasis">Kirim</span>
+                        {% else %}
+                            <span class="badge bg-danger-subtle text-danger-emphasis">Chiqim</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if p.customer %}<a href="{% url 'customers:detail' p.customer.pk %}">{{ p.customer.name }}</a>{% endif %}
+                        {% if p.supplier %}<a href="{% url 'suppliers:detail' p.supplier.pk %}">{{ p.supplier.name }}</a>{% endif %}
+                    </td>
+                    <td>{{ p.cash_register.name|default:p.get_payment_type_display }}</td>
+                    <td>
+                        {% if p.sale %}<a href="{% url 'sales:detail' p.sale.pk %}">{{ p.sale.sale_number }}</a>{% if p.sale.status == 'CANCELLED' %} <span class="badge bg-secondary">bekor qilingan</span>{% endif %}{% endif %}
+                        {% if p.purchase %}<a href="{% url 'purchases:detail' p.purchase.pk %}">{{ p.purchase.purchase_number }}</a>{% if p.purchase.status == 'CANCELLED' %} <span class="badge bg-secondary">bekor qilingan</span>{% endif %}{% endif %}
+                    </td>
+                    <td class="text-end {% if p.is_incoming %}text-success{% else %}text-danger{% endif %}">
+                        {% if p.is_incoming %}+{% else %}-{% endif %}{{ p.amount|uzsum }}
+                    </td>
+                    <td>
+                        <form method="post" action="{% url 'payments:cancel' p.pk %}" onsubmit="return confirm('To\'lovni bekor qilishni tasdiqlaysizmi?');">
+                            {% csrf_token %}
+                            <button class="btn btn-sm btn-outline-danger">Bekor qilish</button>
+                        </form>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-4">To'lov yo'q.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,48 @@
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.db import models
+
+
+class ExpenseCategory(models.Model):
+    name = models.CharField(max_length=120, unique=True)
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'Xarajat turi'
+        verbose_name_plural = 'Xarajat turlari'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class Expense(models.Model):
+    class PaymentType(models.TextChoices):
+        CASH = 'CASH', 'Naqd'
+        CARD = 'CARD', 'Karta'
+        TRANSFER = 'TRANSFER', "O'tkazma"
+        OTHER = 'OTHER', 'Boshqa'
+
+    category = models.ForeignKey(ExpenseCategory, on_delete=models.PROTECT, related_name='expenses')
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    date = models.DateField()
+    description = models.TextField(blank=True)
+    payment_type = models.CharField(max_length=20, choices=PaymentType.choices, default=PaymentType.CASH)
+    cash_register = models.ForeignKey(
+        'kassa.CashRegister', on_delete=models.PROTECT, null=True, blank=True, related_name='expenses',
+        verbose_name='Kassa',
+    )
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Xarajat'
+        verbose_name_plural = 'Xarajatlar'
+        ordering = ['-date', '-id']
+
+    def clean(self):
+        if self.amount <= 0:
+            raise ValidationError('Xarajat musbat bolishi kerak.')
+
+    def __str__(self):
+        return f'{self.category} - {self.amount}'

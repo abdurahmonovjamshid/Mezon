@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% load uz_numbers %}
+{% block title %}Sotuvlar{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Sotuvlar</h4>
+    <a href="{% url 'sales:create' %}" class="btn btn-primary">+ Yangi sotuv</a>
+</div>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-12 col-md-auto">
+        <input type="date" name="date_from" class="form-control" value="{{ date_from }}" placeholder="Dan">
+    </div>
+    <div class="col-12 col-md-auto">
+        <input type="date" name="date_to" class="form-control" value="{{ date_to }}" placeholder="Gacha">
+    </div>
+    <div class="col-12 col-md-auto">
+        <select name="status" class="form-select">
+            <option value="">Barcha holat</option>
+            {% for code, label in statuses %}
+                <option value="{{ code }}" {% if request.GET.status == code %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-12 col-md-auto">
+        <button class="btn btn-outline-secondary" type="submit">Filtr</button>
+    </div>
+    <div class="col-12 col-md-auto">
+        <a href="?all=1" class="btn btn-outline-secondary">Barchasi</a>
+    </div>
+    <div class="col-12 col-md-3 ms-md-auto">
+        <input type="text" id="customerSearch" class="form-control" placeholder="Mijoz nomi bo'yicha qidirish...">
+    </div>
+</form>
+
+<div class="card table-card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle" id="salesTable">
+            <thead>
+            <tr>
+                <th>№</th><th>Sana</th><th>Mijoz</th><th>Mahsulotlar</th><th class="text-end">Jami</th>
+                <th class="text-end">To'langan</th><th class="text-end">Qarz</th><th>Muddat</th><th>Holat</th><th></th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for sale in sales %}
+                <tr data-name="{{ sale.customer.name|lower }}">
+                    <td><a href="{% url 'sales:detail' sale.pk %}">{{ sale.sale_number }}</a></td>
+                    <td>{{ sale.date|date:"d.m.Y" }} <span class="text-muted small">{{ sale.created_at|date:"H:i" }}</span></td>
+                    <td>{{ sale.customer.name }}</td>
+                    <td>
+                        {% for item in sale.items.all %}
+                            <div class="d-flex align-items-center gap-2 small">
+                                {% include "partials/product_thumb.html" with product=item.product %}
+                                <span>{{ item.product.name }} — {{ item.quantity|uzqty }} kg</span>
+                            </div>
+                        {% empty %}
+                            <span class="text-muted small">Mahsulot yo'q</span>
+                        {% endfor %}
+                    </td>
+                    <td class="text-end">{{ sale.total_amount|uzsum }}</td>
+                    <td class="text-end">{{ sale.paid_amount|uzsum }}</td>
+                    <td class="text-end">{{ sale.debt_amount|uzsum }}</td>
+                    <td>
+                        {% if sale.due_date %}
+                            <span class="{% if sale.debt_amount > 0 and sale.due_date <= today %}text-danger fw-semibold{% endif %}">{{ sale.due_date|date:"d.m.Y" }}</span>
+                        {% endif %}
+                    </td>
+                    <td><span class="badge badge-status-{{ sale.status }}">{{ sale.get_status_display }}</span></td>
+                    <td><a href="{% url 'sales:detail' sale.pk %}" class="btn btn-sm btn-outline-secondary">Ko'rish</a></td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="10" class="text-center text-muted py-4">Sotuvlar topilmadi.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.getElementById('customerSearch').addEventListener('input', function (e) {
+    var q = e.target.value.trim().toLowerCase();
+    document.querySelectorAll('#salesTable tbody tr[data-name]').forEach(function (row) {
+        row.style.display = row.dataset.name.indexOf(q) !== -1 ? '' : 'none';
+    });
+});
+</script>
+{% endblock %}

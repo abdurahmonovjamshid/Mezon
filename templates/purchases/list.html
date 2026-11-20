@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% load uz_numbers %}
+{% block title %}Xaridlar{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Xaridlar</h4>
+    <a href="{% url 'purchases:create' %}" class="btn btn-primary">+ Yangi xarid</a>
+</div>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-12 col-md-auto">
+        <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+    </div>
+    <div class="col-12 col-md-auto">
+        <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+    </div>
+    <div class="col-12 col-md-auto">
+        <select name="status" class="form-select">
+            <option value="">Barcha holat</option>
+            {% for code, label in statuses %}
+                <option value="{{ code }}" {% if request.GET.status == code %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-12 col-md-auto">
+        <button class="btn btn-outline-secondary" type="submit">Filtr</button>
+    </div>
+    <div class="col-12 col-md-auto">
+        <a href="?all=1" class="btn btn-outline-secondary">Barchasi</a>
+    </div>
+    <div class="col-12 col-md-3 ms-md-auto">
+        <input type="text" id="supplierSearch" class="form-control" placeholder="Yetkazib beruvchi nomi bo'yicha qidirish...">
+    </div>
+</form>
+
+<div class="card table-card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle" id="purchasesTable">
+            <thead>
+            <tr>
+                <th>№</th><th>Sana</th><th>Yetkazib beruvchi</th><th>Mahsulotlar</th>
+                <th class="text-end">Jami</th><th class="text-end">To'langan</th>
+                <th class="text-end">Qarz</th><th>Holat</th><th></th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for purchase in purchases %}
+                <tr data-name="{{ purchase.supplier.name|lower }}">
+                    <td><a href="{% url 'purchases:detail' purchase.pk %}">{{ purchase.purchase_number }}</a></td>
+                    <td>{{ purchase.date|date:"d.m.Y" }} <span class="text-muted small">{{ purchase.created_at|date:"H:i" }}</span></td>
+                    <td>{{ purchase.supplier.name }}</td>
+                    <td>
+                        {% for item in purchase.items.all %}
+                            <div class="d-flex align-items-center gap-2 small">
+                                {% include "partials/product_thumb.html" with product=item.product %}
+                                <span>{{ item.product.name }} — {{ item.net_weight|uzqty }} kg</span>
+                            </div>
+                        {% empty %}
+                            <span class="text-muted small">Mahsulot yo'q</span>
+                        {% endfor %}
+                    </td>
+                    <td class="text-end">{{ purchase.total_amount|uzsum }}</td>
+                    <td class="text-end text-success">{{ purchase.paid_amount|uzsum }}</td>
+                    <td class="text-end {% if purchase.debt_amount > 0 %}text-danger{% endif %}">{{ purchase.debt_amount|uzsum }}</td>
+                    <td><span class="badge badge-status-{{ purchase.status }}">{{ purchase.get_status_display }}</span></td>
+                    <td><a href="{% url 'purchases:detail' purchase.pk %}" class="btn btn-sm btn-outline-secondary">Ko'rish</a></td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="9" class="text-center text-muted py-4">Xaridlar topilmadi.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.getElementById('supplierSearch').addEventListener('input', function (e) {
+    var q = e.target.value.trim().toLowerCase();
+    document.querySelectorAll('#purchasesTable tbody tr[data-name]').forEach(function (row) {
+        row.style.display = row.dataset.name.indexOf(q) !== -1 ? '' : 'none';
+    });
+});
+</script>
+{% endblock %}

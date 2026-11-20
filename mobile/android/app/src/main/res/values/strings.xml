@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Mezon</string>
+    <string name="title_activity_main">Mezon</string>
+    <string name="package_name">uz.mezon.app</string>
+    <string name="custom_url_scheme">uz.mezon.app</string>
+</resources>

@@ -1,0 +1,12 @@
+{
+  "appId": "uz.mezon.app",
+  "appName": "Mezon",
+  "webDir": "www",
+  "server": {
+    "url": "https://mezon.pythonanywhere.com",
+    "cleartext": false
+  },
+  "android": {
+    "backgroundColor": "#0B1E22"
+  }
+}

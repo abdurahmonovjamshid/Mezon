@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Hisobotlar — {{ APP_NAME }}{% endblock %}
+{% block content %}
+<h4 class="mb-1">Hisobotlar</h4>
+<p class="text-muted mb-4">Kerakli hisobotni tanlang — har birida sana va boshqa filtrlar bor.</p>
+<div class="row g-3">
+    <div class="col-sm-6 col-xl-4">
+        <a href="{% url 'reports:sales' %}" class="card report-tile p-3">
+            <span class="stat-icon tone-teal mb-0"><i class="bi bi-cart-check"></i></span>
+            <span><span class="d-block fw-bold fs-6">Savdo hisoboti</span><span class="text-muted small">Sana, mijoz va mahsulot bo'yicha</span></span>
+        </a>
+    </div>
+    <div class="col-sm-6 col-xl-4">
+        <a href="{% url 'reports:purchases' %}" class="card report-tile p-3">
+            <span class="stat-icon tone-sky mb-0"><i class="bi bi-bag"></i></span>
+            <span><span class="d-block fw-bold fs-6">Xarid hisoboti</span><span class="text-muted small">Sana, yetkazib beruvchi va tur bo'yicha</span></span>
+        </a>
+    </div>
+    <div class="col-sm-6 col-xl-4">
+        <a href="{% url 'reports:inventory' %}" class="card report-tile p-3">
+            <span class="stat-icon tone-slate mb-0"><i class="bi bi-boxes"></i></span>
+            <span><span class="d-block fw-bold fs-6">Ombor hisoboti</span><span class="text-muted small">Kirim, chiqim va qoldiq</span></span>
+        </a>
+    </div>
+    <div class="col-sm-6 col-xl-4">
+        <a href="{% url 'reports:debtor' %}" class="card report-tile p-3">
+            <span class="stat-icon tone-amber mb-0"><i class="bi bi-person-exclamation"></i></span>
+            <span><span class="d-block fw-bold fs-6">Debitor hisoboti</span><span class="text-muted small">Mijozlar bo'yicha jami qarz</span></span>
+        </a>
+    </div>
+    <div class="col-sm-6 col-xl-4">
+        <a href="{% url 'reports:creditor' %}" class="card report-tile p-3">
+            <span class="stat-icon tone-red mb-0"><i class="bi bi-arrow-up-right-circle"></i></span>
+            <span><span class="d-block fw-bold fs-6">Kreditor hisoboti</span><span class="text-muted small">Yetkazib beruvchilarga jami qarz</span></span>
+        </a>
+    </div>
+    <div class="col-sm-6 col-xl-4">
+        <a href="{% url 'reports:profit' %}" class="card report-tile p-3">
+            <span class="stat-icon tone-green mb-0"><i class="bi bi-graph-up-arrow"></i></span>
+            <span><span class="d-block fw-bold fs-6">Foyda hisoboti</span><span class="text-muted small">Tushum, tannarx, yalpi va sof foyda</span></span>
+        </a>
+    </div>
+</div>
+{% endblock %}

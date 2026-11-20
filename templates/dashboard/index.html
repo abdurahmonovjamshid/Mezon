@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% load uz_numbers %}
+{% block title %}Bosh sahifa — {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-4">
+    <div>
+        <h4 class="mb-1">Xush kelibsiz, {{ user.first_name|default:user.get_username }}!</h4>
+        <div class="text-muted">Bugungi holat — {{ today|date:"d.m.Y" }}</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'sales:create' %}" class="btn btn-primary"><i class="bi bi-cart-plus"></i> Yangi sotuv</a>
+        <a href="{% url 'purchases:create' %}" class="btn btn-outline-secondary"><i class="bi bi-bag-plus"></i> Xarid</a>
+    </div>
+</div>
+
+{% if low_stock %}
+<div class="card low-stock-card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-exclamation-triangle-fill text-warning"></i> Kam qolgan mahsulotlar <span class="badge text-bg-warning ms-1">{{ low_stock_total }}</span></span>
+        {% if 'inventory' in allowed_sections %}<a href="{% url 'inventory:list' %}" class="small">Omborga o'tish <i class="bi bi-arrow-right"></i></a>{% endif %}
+    </div>
+    <div class="card-body py-2">
+        <div class="row g-2">
+            {% for row in low_stock %}
+            <div class="col-sm-6 col-lg-3">
+                <div class="low-stock-item">
+                    <div class="fw-bold text-truncate">{{ row.product.name }}</div>
+                    <div class="small text-muted">Qoldiq: <span class="{% if row.stock <= 0 %}text-danger{% else %}text-warning-emphasis{% endif %} fw-bold">{{ row.stock|uzqty }} kg</span> · min {{ row.min_stock|uzqty }} kg</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-icon tone-teal"><i class="bi bi-cart-check"></i></div>
+                <div class="stat-label">Bugungi savdo</div>
+                <div class="stat-value text-primary">{{ today_sales_total|uzsum }} so'm</div>
+                <small class="text-muted">{{ today_sales_count }} ta sotuv</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-icon tone-green"><i class="bi bi-graph-up-arrow"></i></div>
+                <div class="stat-label">Bugungi sof foyda</div>
+                <div class="stat-value text-success">{{ today_net_profit|uzsum }} so'm</div>
+                <small class="text-muted">Yalpi: {{ today_gross_profit|uzsum }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-icon tone-amber"><i class="bi bi-person-exclamation"></i></div>
+                <div class="stat-label">Debitor (mijozlar qarzi)</div>
+                <div class="stat-value text-warning">{{ debitor_total|uzsum }} so'm</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-icon tone-red"><i class="bi bi-arrow-up-right-circle"></i></div>
+                <div class="stat-label">Kreditor (bizning qarzimiz)</div>
+                <div class="stat-value text-danger">{{ creditor_total|uzsum }} so'm</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-icon tone-slate"><i class="bi bi-boxes"></i></div>
+                <div class="stat-label">Ombor (jami)</div>
+                <div class="stat-value">{{ total_stock|uzqty }} kg</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-icon tone-violet"><i class="bi bi-receipt"></i></div>
+                <div class="stat-label">Bugungi xarajat</div>
+                <div class="stat-value">{{ today_expenses|uzsum }} so'm</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-icon tone-sky"><i class="bi bi-cash-coin"></i></div>
+                <div class="stat-label">Mijozlardan to'lov (bugun)</div>
+                <div class="stat-value">{{ customer_payments_today|uzsum }} so'm</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-icon tone-green"><i class="bi bi-cash-stack"></i></div>
+                <div class="stat-label">Naqd qoldiq (taxminiy)</div>
+                <div class="stat-value">{{ naqd_qoldiq|uzsum }} so'm</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-icon tone-teal"><i class="bi bi-wallet2"></i></div>
+                <div class="stat-label">Kassa balansi</div>
+                {% for b in kassa_balances %}
+                <div class="{% if b.balance < 0 %}text-danger{% else %}text-success{% endif %}"><span class="small text-muted">{{ b.register.name }}:</span> <span class="fs-5 fw-semibold">{{ b.balance|uzsum }} so'm</span></div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-8">
+        <div class="card table-card h-100">
+            <div class="card-header bg-white">So'nggi 14 kunlik savdo</div>
+            <div class="card-body"><canvas id="dailySalesChart" height="90"></canvas></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card table-card h-100">
+            <div class="card-header bg-white">Debitor / Kreditor</div>
+            <div class="card-body"><canvas id="debtChart" height="90"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-5">
+        <div class="card table-card h-100">
+            <div class="card-header bg-white">Shu oy eng ko'p sotilgan mahsulotlar</div>
+            <div class="card-body"><canvas id="topProductsChart" height="120"></canvas></div>
+        </div>
+    </div>
+    <div class="col-md-7">
+        <div class="card table-card h-100">
+            <div class="card-header bg-white">Ombor qoldig'i (top 10)</div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>Mahsulot</th><th class="text-end">Qoldiq (kg)</th></tr></thead>
+                    <tbody>
+                    {% for row in stock_rows %}
+                        <tr>
+                            <td>{{ row.product.name }}</td>
+                            <td class="text-end">{{ row.quantity|uzqty }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="2" class="text-center text-muted">Ombor bo'sh</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-6">
+        <div class="card table-card h-100">
+            <div class="card-header bg-white">Shu oy top 10 mijoz (sotuv summasi bo'yicha)</div>
+            <div class="card-body"><canvas id="topCustomersChart" height="140"></canvas></div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card table-card h-100">
+            <div class="card-header bg-white">Shu oy top 10 yetkazib beruvchi (xarid summasi bo'yicha)</div>
+            <div class="card-body"><canvas id="topSuppliersChart" height="140"></canvas></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+    Chart.defaults.font.family = "Manrope, system-ui, sans-serif";
+    Chart.defaults.color = "#64748B";
+    if (document.documentElement.getAttribute("data-bs-theme") === "dark") { Chart.defaults.color = "#8EA3A9"; Chart.defaults.borderColor = "rgba(255,255,255,0.08)"; }
+    new Chart(document.getElementById('dailySalesChart'), {
+        type: 'line',
+        data: {
+            labels: {{ daily_labels|safe }},
+            datasets: [{
+                label: "Savdo (so'm)",
+                data: {{ daily_values|safe }},
+                borderColor: '#0D9488',
+                backgroundColor: 'rgba(13,148,136,0.12)',
+                fill: true,
+                tension: 0.3,
+            }],
+        },
+        options: { plugins: { legend: { display: false } } },
+    });
+
+    new Chart(document.getElementById('debtChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Debitor', 'Kreditor'],
+            datasets: [{ data: {{ debitor_creditor_values|safe }}, backgroundColor: ['#F59E0B', '#E5484D'] }],
+        },
+    });
+
+    new Chart(document.getElementById('topProductsChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ top_products_labels|safe }},
+            datasets: [{ label: 'kg', data: {{ top_products_values|safe }}, backgroundColor: '#14B8A6', borderRadius: 6 }],
+        },
+        options: { indexAxis: 'y', plugins: { legend: { display: false } } },
+    });
+
+    new Chart(document.getElementById('topCustomersChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ top_customers_labels|safe }},
+            datasets: [{ label: "so'm", data: {{ top_customers_values|safe }}, backgroundColor: '#0F766E', borderRadius: 6 }],
+        },
+        options: { indexAxis: 'y', plugins: { legend: { display: false } } },
+    });
+
+    new Chart(document.getElementById('topSuppliersChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ top_suppliers_labels|safe }},
+            datasets: [{ label: "so'm", data: {{ top_suppliers_values|safe }}, backgroundColor: '#F59E0B', borderRadius: 6 }],
+        },
+        options: { indexAxis: 'y', plugins: { legend: { display: false } } },
+    });
+</script>
+{% endblock %}

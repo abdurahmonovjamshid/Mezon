@@ -1,0 +1,174 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0B1E22">
+    <title>{% block title %}{% if nav_current %}{{ nav_current.label }} — {% endif %}{{ APP_NAME }}{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{% static 'img/logo.svg' %}">
+    <link rel="apple-touch-icon" href="{% static 'img/app-icon-192.png' %}">
+    <link rel="manifest" href="{% static 'manifest.webmanifest' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}?v=3">
+    <link rel="stylesheet" href="{% static 'css/theme.css' %}?v=4">
+    <link rel="stylesheet" href="{% static 'css/theme-extra.css' %}?v=3">
+    <script>
+        (function () {
+            var root = document.documentElement, theme = null;
+            try {
+                if (localStorage.getItem('mz-sidebar') === 'mini') root.classList.add('sidebar-mini');
+                theme = localStorage.getItem('mz-theme');
+            } catch (e) {}
+            if (!theme) theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            root.setAttribute('data-bs-theme', theme);
+        })();
+    </script>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="{% if user.is_authenticated %}app-body{% else %}auth-body{% endif %}">
+{% if user.is_authenticated %}
+<div class="app-shell">
+    <aside class="sidebar offcanvas-lg offcanvas-start" tabindex="-1" id="appSidebar" aria-label="Asosiy menyu">
+        <div class="sidebar-brand">
+            <a href="{% url 'dashboard:index' %}" class="brand-link">
+                <img src="{% static 'img/logo.svg' %}" alt="" class="brand-logo">
+                <span class="brand-text">
+                    <span class="brand-name">{{ APP_NAME }}</span>
+                    <span class="brand-tagline">{{ APP_TAGLINE }}</span>
+                </span>
+            </a>
+            <button type="button" class="btn-close d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#appSidebar" aria-label="Yopish"></button>
+        </div>
+
+        <nav class="sidebar-nav">
+            {% for group in nav_groups %}
+                <div class="nav-group">
+                    {% if group.title %}<div class="nav-group-title">{{ group.title }}</div>{% endif %}
+                    {% for item in group.items %}
+                        <a href="{{ item.href }}" class="nav-item-link{% if item.active %} active{% endif %}" title="{{ item.label }}"{% if item.active %} aria-current="page"{% endif %}>
+                            <i class="bi bi-{{ item.icon }}"></i>
+                            <span class="nav-item-label">{{ item.label }}</span>
+                            {% if item.badge == 'due_sales_count' and due_sales_count %}
+                                <span class="nav-badge">{{ due_sales_count }}</span>
+                            {% elif item.badge_value %}
+                                <span class="nav-badge nav-badge-warn" title="Kam qolgan mahsulotlar">{{ item.badge_value }}</span>
+                            {% endif %}
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        </nav>
+
+        <div class="sidebar-footer">
+            {% if user.is_superuser %}
+                <a href="/admin/" class="nav-item-link" title="Admin panel">
+                    <i class="bi bi-gear"></i><span class="nav-item-label">Admin panel</span>
+                </a>
+            {% endif %}
+            <button type="button" class="nav-item-link sidebar-collapse-btn d-none d-lg-flex" data-action="toggle-sidebar" title="Menyuni yig'ish / yoyish">
+                <i class="bi bi-layout-sidebar-inset"></i><span class="nav-item-label">Menyuni yig'ish</span>
+            </button>
+        </div>
+    </aside>
+
+    <div class="app-main">
+        <header class="topbar">
+            <button class="icon-btn d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#appSidebar" aria-controls="appSidebar" aria-label="Menyu">
+                <i class="bi bi-list"></i>
+            </button>
+            <div class="topbar-title">
+                {% if nav_current %}
+                    {% if nav_current.group %}<span class="crumb d-none d-sm-inline">{{ nav_current.group }}</span><i class="bi bi-chevron-right crumb-sep d-none d-sm-inline"></i>{% endif %}
+                    <span class="crumb-current">{{ nav_current.label }}</span>
+                {% else %}
+                    <span class="crumb-current">{{ APP_NAME }}</span>
+                {% endif %}
+            </div>
+            <form class="topbar-search d-none d-md-block" action="{% url 'search' %}" method="get" role="search" autocomplete="off">
+                <i class="bi bi-search"></i>
+                <input type="search" name="q" id="globalSearch" placeholder="Qidirish: mijoz, mahsulot, sotuv..." aria-label="Qidirish" value="{{ request.GET.q|default:'' }}">
+                <kbd class="d-none d-xl-inline">/</kbd>
+                <div class="search-dropdown" id="searchDropdown" hidden></div>
+            </form>
+            <div class="topbar-actions">
+                <a class="icon-btn d-md-none" href="{% url 'search' %}" title="Qidirish" aria-label="Qidirish"><i class="bi bi-search"></i></a>
+                <button class="icon-btn" type="button" data-action="toggle-theme" title="Yorug' / qorong'i rejim" aria-label="Mavzuni almashtirish">
+                    <i class="bi bi-moon-stars theme-icon-light"></i><i class="bi bi-sun theme-icon-dark"></i>
+                </button>
+                {% with a=allowed_sections %}
+                {% if 'sales' in a or 'purchases' in a or 'payments' in a or 'expenses' in a or 'customers' in a or 'products' in a %}
+                <div class="dropdown">
+                    <button class="btn btn-primary btn-sm dropdown-toggle quick-add" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-plus-lg"></i><span class="d-none d-sm-inline"> Yangi</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                        {% if 'sales' in a %}<li><a class="dropdown-item" href="{% url 'sales:create' %}"><i class="bi bi-cart-plus"></i> Sotuv</a></li>{% endif %}
+                        {% if 'purchases' in a %}<li><a class="dropdown-item" href="{% url 'purchases:create' %}"><i class="bi bi-bag-plus"></i> Xarid</a></li>{% endif %}
+                        {% if 'payments' in a %}<li><a class="dropdown-item" href="{% url 'payments:create' %}"><i class="bi bi-credit-card-2-front"></i> To'lov</a></li>{% endif %}
+                        {% if 'expenses' in a %}<li><a class="dropdown-item" href="{% url 'expenses:create' %}"><i class="bi bi-receipt"></i> Xarajat</a></li>{% endif %}
+                        {% if 'customers' in a or 'products' in a %}<li><hr class="dropdown-divider"></li>{% endif %}
+                        {% if 'customers' in a %}<li><a class="dropdown-item" href="{% url 'customers:create' %}"><i class="bi bi-person-plus"></i> Mijoz</a></li>{% endif %}
+                        {% if 'products' in a %}<li><a class="dropdown-item" href="{% url 'products:create' %}"><i class="bi bi-box-seam"></i> Mahsulot</a></li>{% endif %}
+                    </ul>
+                </div>
+                {% endif %}
+                {% if 'sales' in a %}
+                <a class="icon-btn bell-btn position-relative" href="{% url 'sales:due' %}" title="To'lov muddati kelganlar">
+                    <i class="bi bi-bell"></i>
+                    {% if due_sales_count %}<span class="dot-badge">{{ due_sales_count }}</span>{% endif %}
+                </a>
+                {% endif %}
+                {% endwith %}
+                <div class="dropdown">
+                    <button class="user-chip" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Foydalanuvchi menyusi">
+                        <span class="avatar">{{ user.first_name|default:user.get_username|slice:":1"|upper }}</span>
+                        <span class="user-name d-none d-md-inline">{{ user.get_full_name|default:user.get_username }}</span>
+                        <i class="bi bi-chevron-down small d-none d-md-inline"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                        <li><span class="dropdown-item-text small text-muted">{{ user.get_username }}{% if user_roles %} · {{ user_roles|join:", " }}{% endif %}</span></li>
+                        {% if user.is_superuser %}
+                            <li><a class="dropdown-item" href="/admin/"><i class="bi bi-gear"></i> Admin panel</a></li>
+                        {% endif %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form method="post" action="{% url 'logout' %}">
+                                {% csrf_token %}
+                                <button class="dropdown-item text-danger" type="submit"><i class="bi bi-box-arrow-right"></i> Chiqish</button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </header>
+
+        <main class="app-content">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Yopish"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+{% else %}
+    {% block auth_content %}
+    <main class="container py-5">{% block content_anon %}{% endblock %}</main>
+    {% endblock %}
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{% static 'js/app.js' %}?v=2"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

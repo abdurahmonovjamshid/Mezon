@@ -1,0 +1,167 @@
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
+
+
+class ButcheringSpecification(models.Model):
+    """Bo'laklash usuli (retsept): bitta "father" mahsulotni bo'laklaganda
+    odatda qaysi "child" mahsulotlar hosil bolishini belgilaydi. Bitta
+    mahsulot bir nechta turli usulda bo'laklanishi mumkin (masalan
+    "Standart" va "Tezkor" usullar) — har biri alohida nom bilan saqlanadi."""
+
+    name = models.CharField(max_length=120)
+    parent_product = models.ForeignKey(
+        'products.Product', on_delete=models.CASCADE, related_name='specifications',
+    )
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Spetsifikatsiya'
+        verbose_name_plural = 'Spetsifikatsiyalar'
+        ordering = ['parent_product__name', 'name']
+        unique_together = ('parent_product', 'name')
+
+    def __str__(self):
+        return f'{self.parent_product.name} — {self.name}'
+
+
+class ButcheringSpecificationItem(models.Model):
+    specification = models.ForeignKey(ButcheringSpecification, on_delete=models.CASCADE, related_name='items')
+    child_product = models.ForeignKey(
+        'products.Product', on_delete=models.PROTECT, related_name='specification_sources',
+    )
+    order = models.PositiveIntegerField(default=0)
+    cost_percentage = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Tannarxdan ulush %. Barcha qatorlar uchun to'ldirilsa, jami 100%% "
+                  "bo'lishi kerak. Bo'sh qoldirilsa, eskicha og'irlik (kg) ulushi "
+                  "bo'yicha taqsimlanadi.",
+    )
+
+    class Meta:
+        verbose_name = 'Spetsifikatsiya qatori'
+        verbose_name_plural = 'Spetsifikatsiya qatorlari'
+        ordering = ['order', 'id']
+
+    def clean(self):
+        if self.specification_id and self.child_product_id == self.specification.parent_product_id:
+            raise ValidationError("Chiqish mahsuloti bo'laklanayotgan mahsulotning o'zi bolmasligi kerak.")
+
+    def __str__(self):
+        return f'{self.specification} -> {self.child_product}'
+
+
+class Butchering(models.Model):
+    class Status(models.TextChoices):
+        DRAFT = 'DRAFT', 'Draft'
+        CONFIRMED = 'CONFIRMED', 'Confirmed'
+        CANCELLED = 'CANCELLED', 'Cancelled'
+
+    purchase = models.ForeignKey(
+        'purchases.Purchase', on_delete=models.PROTECT, related_name='butcherings',
+        null=True, blank=True,
+    )
+    input_product = models.ForeignKey('products.Product', on_delete=models.PROTECT, related_name='butchering_inputs')
+    specification = models.ForeignKey(
+        ButcheringSpecification, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='butcherings',
+    )
+    input_weight = models.DecimalField(max_digits=10, decimal_places=3)
+    input_pieces = models.PositiveIntegerField(default=0, help_text="Bo'laklanayotgan dona/bo'lak soni")
+    output_weight = models.DecimalField(max_digits=10, decimal_places=3, default=0)
+    difference = models.DecimalField(max_digits=10, decimal_places=3, default=0)
+    yield_percentage = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    date = models.DateField()
+    warehouse = models.ForeignKey(
+        'inventory.Warehouse', on_delete=models.PROTECT, null=True, blank=True, related_name='+',
+        verbose_name='Ombor', help_text="Bo'sh bo'lsa asosiy ombor",
+    )
+    cash_register = models.ForeignKey(
+        'kassa.CashRegister', on_delete=models.PROTECT, null=True, blank=True, related_name='+',
+        verbose_name='Kassa', help_text="Bo'laklash xarajatlari qaysi kassadan to'lanadi (bo'sh — Naqd)",
+    )
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
+    notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Bo'laklash"
+        verbose_name_plural = "Bo'laklashlar"
+        ordering = ['-date', '-id']
+
+    def clean(self):
+        if self.input_weight <= 0:
+            raise ValidationError('Input vazn musbat bolishi kerak.')
+        if self.output_weight > self.input_weight:
+            raise ValidationError('Output inputdan katta bolmasligi kerak.')
+        if self.input_product_id:
+            from apps.inventory.services import inventory_service
+            warehouse = inventory_service.resolve_warehouse(self.warehouse)
+            available = inventory_service.get_stock(self.input_product, warehouse)
+            if self.input_weight > available:
+                raise ValidationError(
+                    f"Omborda yetarli mahsulot mavjud emas. "
+                    f"Mavjud qoldiq: {available} kg ({self.input_product.name})"
+                )
+            available_pieces = inventory_service.get_stock_pieces(self.input_product, warehouse)
+            if self.input_pieces and self.input_pieces > available_pieces:
+                raise ValidationError(
+                    f"Omborda yetarli dona/bo'lak mavjud emas. "
+                    f"Mavjud qoldiq: {available_pieces} dona ({self.input_product.name})"
+                )
+
+    def __str__(self):
+        return f'Butchering #{self.pk or "new"}'
+
+
+class ButcheringOutput(models.Model):
+    butchering = models.ForeignKey(Butchering, on_delete=models.CASCADE, related_name='outputs')
+    product = models.ForeignKey('products.Product', on_delete=models.PROTECT, related_name='butchering_outputs')
+    quantity = models.DecimalField(max_digits=10, decimal_places=3)
+    pieces = models.PositiveIntegerField(default=0, help_text="Dona/bo'lak soni")
+    unit_cost = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+
+    class Meta:
+        verbose_name = "Bo'laklash natijasi"
+        verbose_name_plural = "Bo'laklash natijalari"
+        ordering = ['id']
+
+    def clean(self):
+        if self.quantity is None:
+            return
+        if self.quantity <= 0:
+            raise ValidationError('Output miqdori musbat bolishi kerak.')
+
+    def __str__(self):
+        return f'{self.product} - {self.quantity} kg'
+
+
+class ButcheringExpense(models.Model):
+    class ExpenseType(models.TextChoices):
+        LABOR = 'LABOR', 'Ishchi kuchi'
+        PACKAGING = 'PACKAGING', "Qadoqlash"
+        OTHER = 'OTHER', 'Boshqa'
+
+    butchering = models.ForeignKey(Butchering, on_delete=models.CASCADE, related_name='extra_expenses')
+    expense_type = models.CharField(max_length=20, choices=ExpenseType.choices, default=ExpenseType.LABOR)
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    notes = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        verbose_name = "Bo'laklash xarajati"
+        verbose_name_plural = "Bo'laklash xarajatlari"
+        ordering = ['id']
+
+    def clean(self):
+        if self.amount is None:
+            return
+        if self.amount < 0:
+            raise ValidationError('Xarajat manfiy bolmasligi kerak.')
+
+    def __str__(self):
+        return f'{self.butchering} - {self.expense_type}'

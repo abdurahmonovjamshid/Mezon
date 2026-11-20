@@ -1,0 +1,191 @@
+/* =====================================================================
+   Mezon: umumiy qidiruv, ogohlantirishlar, bo'sh holat va qorong'i rejim
+   ===================================================================== */
+.topbar-title { flex: 0 1 auto; }
+.topbar-search {
+    position: relative;
+    flex: 1 1 auto;
+    max-width: 440px;
+    margin: 0 auto 0 12px;
+}
+.topbar-search > .bi-search {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--mz-muted);
+    pointer-events: none;
+}
+.topbar-search input {
+    width: 100%;
+    height: 40px;
+    padding: 0 40px 0 38px;
+    border: 1px solid var(--mz-border);
+    border-radius: 12px;
+    background: var(--mz-surface);
+    color: var(--mz-text);
+    font-weight: 500;
+    font-size: .9rem;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+}
+.topbar-search input:focus { border-color: var(--mz-primary); box-shadow: 0 0 0 .2rem rgba(13, 148, 136, .15); }
+.topbar-search kbd {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--mz-bg);
+    color: var(--mz-muted);
+    border: 1px solid var(--mz-border);
+    font-size: .7rem;
+    padding: 1px 7px;
+    box-shadow: none;
+}
+.search-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    max-height: 70vh;
+    overflow-y: auto;
+    background: var(--mz-surface);
+    border: 1px solid var(--mz-border);
+    border-radius: 14px;
+    box-shadow: 0 16px 40px rgba(16, 35, 42, .14);
+    padding: 6px;
+    z-index: 1060;
+}
+.search-group + .search-group { border-top: 1px solid var(--mz-border); margin-top: 4px; padding-top: 4px; }
+.search-group-title { font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--mz-muted); padding: 8px 10px 4px; }
+.search-item { display: flex; flex-direction: column; padding: 7px 10px; border-radius: 9px; text-decoration: none; color: var(--mz-text); }
+.search-item:hover, .search-item.active { background: var(--mz-primary-50); color: var(--mz-text); }
+.search-item-title { font-weight: 700; font-size: .9rem; }
+.search-item-sub { font-size: .78rem; color: var(--mz-muted); }
+.search-empty { padding: 14px; text-align: center; color: var(--mz-muted); font-size: .9rem; }
+.search-all { display: block; text-align: center; padding: 9px; margin-top: 4px; border-top: 1px solid var(--mz-border); font-weight: 700; font-size: .85rem; text-decoration: none; }
+
+.nav-badge-warn { background: #FEF3C7; color: #B45309; }
+[data-bs-theme="dark"] .nav-badge-warn { background: rgba(245, 158, 11, .18); color: #FBBF24; }
+.low-stock-card { border-left: 4px solid var(--mz-accent); }
+.low-stock-item { padding: 10px 12px; border-radius: 10px; background: var(--mz-bg); border: 1px solid var(--mz-border); }
+
+.empty-state { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 56px 16px; }
+.empty-state .stat-icon { width: 56px; height: 56px; font-size: 1.5rem; border-radius: 16px; }
+
+/* Mavzu ikonkalari: yorug' rejimda oy, qorong'ida quyosh */
+.theme-icon-dark { display: none; }
+[data-bs-theme="dark"] .theme-icon-dark { display: inline-block; }
+[data-bs-theme="dark"] .theme-icon-light { display: none; }
+
+/* ---------------------------- Qorong'i rejim ---------------------------- */
+[data-bs-theme="dark"] {
+    color-scheme: dark;
+    --mz-bg: #0A1316;
+    --mz-surface: #111D21;
+    --mz-border: #213238;
+    --mz-text: #E3ECEE;
+    --mz-muted: #8EA3A9;
+    --mz-primary-50: rgba(45, 212, 191, .10);
+    --mz-primary-100: rgba(45, 212, 191, .22);
+    --mz-sidebar-bg: #071013;
+    --mz-nav-bg: #0D171A;
+    --mz-nav-border: #1C2B30;
+    --mz-nav-text: #B4C6CA;
+    --mz-nav-icon: #7F959B;
+    --mz-nav-title: #5F7C82;
+    --mz-nav-hover-bg: rgba(255, 255, 255, .06);
+    --mz-nav-hover-text: #FFFFFF;
+    --mz-nav-active-bg: rgba(45, 212, 191, .14);
+    --mz-nav-active-text: #5EEAD4;
+    --mz-nav-brand: #FFFFFF;
+    --mz-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .25);
+
+    --bs-body-bg: var(--mz-bg);
+    --bs-body-color: var(--mz-text);
+    --bs-emphasis-color: #F1F6F7;
+    --bs-secondary-color: var(--mz-muted);
+    --bs-tertiary-bg: #15242A;
+    --bs-secondary-bg: #182A30;
+    --bs-border-color: var(--mz-border);
+    --bs-heading-color: #F1F6F7;
+    --bs-link-color: #2DD4BF;
+    --bs-link-color-rgb: 45, 212, 191;
+    --bs-link-hover-color: #5EEAD4;
+    --bs-link-hover-color-rgb: 94, 234, 212;
+    --bs-primary-text-emphasis: #5EEAD4;
+    --bs-success-text-emphasis: #4ADE80;
+    --bs-danger-text-emphasis: #F87171;
+    --bs-warning-text-emphasis: #FBBF24;
+}
+[data-bs-theme="dark"] body { background-color: var(--mz-bg); }
+[data-bs-theme="dark"] .topbar { background: rgba(10, 19, 22, .82); }
+[data-bs-theme="dark"] .card,
+[data-bs-theme="dark"] .modal-content,
+[data-bs-theme="dark"] .offcanvas,
+[data-bs-theme="dark"] .dropdown-menu,
+[data-bs-theme="dark"] .list-group-item { background-color: var(--mz-surface); color: var(--mz-text); }
+[data-bs-theme="dark"] .card-header.bg-white,
+[data-bs-theme="dark"] .bg-white { background-color: var(--mz-surface) !important; }
+[data-bs-theme="dark"] .card .text-dark:not(.badge),
+[data-bs-theme="dark"] .auth-mobile-brand .text-dark { color: var(--mz-text) !important; }
+[data-bs-theme="dark"] .table > thead th,
+[data-bs-theme="dark"] .table-light { --bs-table-bg: #15242A; background: #15242A; color: var(--mz-muted); }
+[data-bs-theme="dark"] .table { --bs-table-color: var(--mz-text); --bs-table-hover-bg: #15252A; }
+[data-bs-theme="dark"] .table-hover tbody tr:hover { background: #15252A; }
+[data-bs-theme="dark"] .form-control,
+[data-bs-theme="dark"] .form-select { background-color: #0D181B; border-color: #2A3E45; color: var(--mz-text); }
+[data-bs-theme="dark"] .form-control::placeholder { color: #5F7479; }
+[data-bs-theme="dark"] .form-label { color: #B9C9CD; }
+[data-bs-theme="dark"] .input-group-text { background: #15242A; border-color: #2A3E45; color: var(--mz-muted); }
+[data-bs-theme="dark"] .btn-outline-secondary {
+    --bs-btn-color: #CFDCDF; --bs-btn-border-color: #2A3E45;
+    --bs-btn-hover-bg: #182A30; --bs-btn-hover-color: #fff; --bs-btn-hover-border-color: #36505A;
+    --bs-btn-active-bg: #1E333A; --bs-btn-active-color: #fff;
+    background: var(--mz-surface);
+}
+[data-bs-theme="dark"] .btn-secondary { --bs-btn-bg: #182A30; --bs-btn-color: #E3ECEE; --bs-btn-border-color: #2A3E45; --bs-btn-hover-bg: #1E333A; --bs-btn-hover-color: #fff; }
+[data-bs-theme="dark"] .btn-dark { --bs-btn-bg: #1E333A; --bs-btn-border-color: #1E333A; --bs-btn-hover-bg: #26414A; }
+[data-bs-theme="dark"] .btn-outline-dark { --bs-btn-color: #CFDCDF; --bs-btn-border-color: #36505A; --bs-btn-hover-bg: #E3ECEE; --bs-btn-hover-color: #0A1316; }
+[data-bs-theme="dark"] .icon-btn,
+[data-bs-theme="dark"] .user-chip { background: var(--mz-surface); }
+[data-bs-theme="dark"] .stat-icon.tone-teal   { background: rgba(45, 212, 191, .12); color: #5EEAD4; }
+[data-bs-theme="dark"] .stat-icon.tone-green  { background: rgba(74, 222, 128, .12); color: #4ADE80; }
+[data-bs-theme="dark"] .stat-icon.tone-amber  { background: rgba(251, 191, 36, .12); color: #FBBF24; }
+[data-bs-theme="dark"] .stat-icon.tone-red    { background: rgba(248, 113, 113, .12); color: #F87171; }
+[data-bs-theme="dark"] .stat-icon.tone-sky    { background: rgba(56, 189, 248, .12); color: #38BDF8; }
+[data-bs-theme="dark"] .stat-icon.tone-violet { background: rgba(167, 139, 250, .14); color: #A78BFA; }
+[data-bs-theme="dark"] .stat-icon.tone-slate  { background: rgba(148, 163, 184, .12); color: #CBD5E1; }
+[data-bs-theme="dark"] .badge-status-DRAFT { background-color: #1E2D33 !important; color: #A9BBC0 !important; }
+[data-bs-theme="dark"] .badge-status-CONFIRMED { background-color: rgba(74, 222, 128, .14) !important; color: #4ADE80 !important; }
+[data-bs-theme="dark"] .badge-status-CANCELLED { background-color: rgba(248, 113, 113, .14) !important; color: #F87171 !important; }
+[data-bs-theme="dark"] .alert-success { background: rgba(74, 222, 128, .08); border-color: rgba(74, 222, 128, .25); color: #86EFAC; }
+[data-bs-theme="dark"] .alert-danger,
+[data-bs-theme="dark"] .alert-error { background: rgba(248, 113, 113, .08); border-color: rgba(248, 113, 113, .25); color: #FCA5A5; }
+[data-bs-theme="dark"] .alert-warning { background: rgba(251, 191, 36, .08); border-color: rgba(251, 191, 36, .25); color: #FCD34D; }
+[data-bs-theme="dark"] .alert-info { background: rgba(56, 189, 248, .08); border-color: rgba(56, 189, 248, .25); color: #7DD3FC; }
+[data-bs-theme="dark"] .text-bg-light { background-color: #1E2D33 !important; color: var(--mz-text) !important; }
+[data-bs-theme="dark"] .product-thumb,
+[data-bs-theme="dark"] .product-thumb-lg { background: #0D181B; border-color: var(--mz-border); }
+[data-bs-theme="dark"] .product-thumb-placeholder,
+[data-bs-theme="dark"] .product-thumb-placeholder-lg,
+[data-bs-theme="dark"] .product-card-img-placeholder { background: #15242A !important; color: #5F7479; }
+[data-bs-theme="dark"] .picker-results { background: var(--mz-surface); border-color: var(--mz-border); }
+[data-bs-theme="dark"] .picker-result-item:hover,
+[data-bs-theme="dark"] .picker-result-item.active { background: #15252A; }
+[data-bs-theme="dark"] .cart-bar { background: var(--mz-surface); border-top-color: var(--mz-border); }
+[data-bs-theme="dark"] .cart-line { border-bottom-color: var(--mz-border); }
+[data-bs-theme="dark"] .report-tile:hover { box-shadow: 0 10px 28px rgba(0, 0, 0, .35); }
+[data-bs-theme="dark"] .search-dropdown { box-shadow: 0 16px 40px rgba(0, 0, 0, .45); }
+
+/* Telefon: yuqori panel ekranga sig'ishi uchun ixchamroq */
+@media (max-width: 575.98px) {
+    .topbar { gap: 6px; padding: 0 10px; }
+    .topbar-actions { gap: 5px; }
+    .topbar .icon-btn, .topbar .user-chip { width: 36px; height: 36px; font-size: 1.05rem; border-radius: 10px; }
+    .topbar .user-chip { padding: 0; justify-content: center; }
+    .topbar .user-chip .avatar { width: 28px; height: 28px; border-radius: 8px; }
+    .topbar .quick-add { height: 36px; padding: 0 10px; }
+    .topbar .bell-btn { display: none; }
+    .topbar-title { flex: 1 1 auto; min-width: 0; font-size: .9rem; }
+}

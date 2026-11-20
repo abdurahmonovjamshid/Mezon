@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Yangi sotuv{% endblock %}
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-cart-plus"></i> Yangi sotuv</h4>
+
+<form method="post" novalidate id="sale-form">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    {% endif %}
+    <div class="card table-card mb-3">
+        <div class="card-body row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Mijoz</label>
+                <div class="picker" data-picker="customer">
+                    <input type="text" class="form-control picker-search" autocomplete="off">
+                    <div class="picker-results" style="display:none;"></div>
+                    {{ form.customer }}
+                </div>
+                {{ form.customer.errors }}
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label">Sana</label>
+                {{ form.date }}
+                {{ form.date.errors }}
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label">{{ form.due_date.label }}</label>
+                {{ form.due_date }}
+                {{ form.due_date.errors }}
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label">{{ form.warehouse.label }}</label>
+                {{ form.warehouse }}{{ form.warehouse.errors }}
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label d-flex justify-content-between align-items-center flex-wrap gap-1">
+                    <span>{{ form.paid_amount.label }}</span>
+                    <span class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-secondary" id="pay-half">50%</button>
+                        <button type="button" class="btn btn-outline-secondary" id="pay-full">Hammasi</button>
+                    </span>
+                </label>
+                {{ form.paid_amount }}
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label">{{ form.cash_register.label }}</label>
+                {{ form.cash_register }}
+            </div>
+        </div>
+    </div>
+
+    {{ formset.management_form }}
+    {% if formset.non_form_errors %}
+        <div class="alert alert-danger">{{ formset.non_form_errors }}</div>
+    {% endif %}
+    <div id="hidden-items" class="d-none"></div>
+
+    <div class="card table-card mb-3">
+        <div class="card-header bg-white">
+            <div class="d-flex gap-2 flex-wrap align-items-center">
+                <input type="text" id="catalog-search" class="form-control flex-grow-1" style="min-width:160px" placeholder="Mahsulot qidirish...">
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button"
+                            data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                        Kategoriya
+                    </button>
+                    <div class="dropdown-menu p-2 category-dropdown-menu">
+                        <input type="text" id="category-search" class="form-control form-control-sm mb-2" placeholder="Kategoriya qidirish...">
+                        <div id="category-checklist"></div>
+                    </div>
+                </div>
+                <div class="form-check form-switch mb-0 text-nowrap">
+                    <input class="form-check-input" type="checkbox" id="show-out-of-stock">
+                    <label class="form-check-label small" for="show-out-of-stock">Omborda yo'qlarni ham ko'rsatish</label>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row g-2" id="product-catalog"></div>
+            <div id="catalog-empty" class="text-center text-muted py-4 d-none">Mahsulot topilmadi.</div>
+        </div>
+    </div>
+
+    <div class="offcanvas offcanvas-bottom" tabindex="-1" id="cartOffcanvas" style="height: 82vh;">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title"><i class="bi bi-basket"></i> Savatcha</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Yopish"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column">
+            <div id="cart-lines" class="flex-grow-1 overflow-auto"></div>
+            <div id="cart-empty" class="text-center text-muted py-4">Savatcha bo'sh. Katalogdan mahsulot tanlang.</div>
+            <div class="border-top pt-3 mt-2">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="fw-semibold">Umumiy summa:</span>
+                    <span class="grand-total-box" id="grand-total">0 so'm</span>
+                </div>
+                <button type="submit" class="btn btn-success btn-lg w-100">SOTUVNI TASDIQLASH</button>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div class="cart-bar" id="cart-bar">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <span id="cart-bar-count" class="fw-semibold">0 mahsulot</span>
+            <span class="text-muted small"> · Jami: <span id="cart-bar-total">0</span> so'm</span>
+        </div>
+        <button type="button" class="btn btn-success" data-bs-toggle="offcanvas" data-bs-target="#cartOffcanvas">
+            Savat <i class="bi bi-basket"></i>         </button>
+    </div>
+</div>
+<div class="cart-bar-spacer"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/picker.js' %}?v=3"></script>
+<script src="{% static 'js/sale_form.js' %}?v=3"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        window.SaleFormInit({
+            products: {{ products_json|safe }},
+            customers: {{ customers_json|safe }},
+            initialCart: {{ initial_cart_json|safe }},
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,12 @@
+{
+  "name": "Mezon — Savdo va ombor boshqaruvi",
+  "short_name": "Mezon",
+  "start_url": "/dashboard/",
+  "display": "standalone",
+  "background_color": "#0B1E22",
+  "theme_color": "#0B1E22",
+  "icons": [
+    {"src": "img/app-icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "img/app-icon-512.png", "sizes": "512x512", "type": "image/png"}
+  ]
+}

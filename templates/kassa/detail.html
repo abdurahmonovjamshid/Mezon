@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% load uz_numbers %}
+{% block title %}Kassa{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-wallet2"></i> Kassa</h4>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        {% for b in balances %}
+        <div class="card stat-card {% if not forloop.last %}mb-3{% endif %}">
+            <div class="card-body">
+                <div class="stat-label">{{ b.register.name }} — joriy balans</div>
+                <div class="stat-value {% if b.balance < 0 %}text-danger{% else %}text-success{% endif %}">{{ b.balance|uzsum }} so'm</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% if user.is_superuser %}
+    <div class="col-md-8">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="stat-label mb-2">Kassaga pul kiritish/tuzatish (boshlang'ich balans)</div>
+                <form method="post" action="{% url 'kassa:add_balance' %}" class="row g-2 align-items-end">
+                    {% csrf_token %}
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small">{{ balance_form.cash_register.label }}</label>
+                        {{ balance_form.cash_register }}
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small">{{ balance_form.amount.label }}</label>
+                        {{ balance_form.amount }}
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small">{{ balance_form.date.label }}</label>
+                        {{ balance_form.date }}
+                    </div>
+                    <div class="col-12 col-md-10">
+                        <label class="form-label small">{{ balance_form.notes.label }}</label>
+                        {{ balance_form.notes }}
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">Kiritish</button>
+                    </div>
+                </form>
+                <p class="text-muted small mb-0 mt-2">{{ balance_form.amount.help_text }} Batafsil tarix uchun <a href="/admin/kassa/cashtransaction/">admin panel</a>.</p>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-md-8 d-flex align-items-center">
+        <p class="text-muted small mb-0">Kassa balansini qo'lda o'zgartirish faqat admin (superuser) tomonidan amalga oshiriladi.</p>
+    </div>
+    {% endif %}
+</div>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-12 col-md-auto">
+        <select name="register" class="form-select">
+            <option value="">Barcha kassalar</option>
+            {% for r in registers %}
+                <option value="{{ r.id }}" {% if r.id == register.id %}selected{% endif %}>{{ r.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-12 col-md-auto"><input type="date" name="date_from" class="form-control" value="{{ date_from }}"></div>
+    <div class="col-12 col-md-auto"><input type="date" name="date_to" class="form-control" value="{{ date_to }}"></div>
+    <div class="col-12 col-md-auto"><button class="btn btn-outline-secondary" type="submit">Filtr</button></div>
+    <div class="col-12 col-md-auto"><a href="?all=1" class="btn btn-outline-secondary">Barchasi</a></div>
+</form>
+
+<div class="card table-card">
+    <div class="table-responsive">
+        <table class="table mb-0 align-middle">
+            <thead><tr><th>Sana</th><th>Kassa</th><th>Turi</th><th class="text-end">Summa</th><th>Havola</th><th>Izoh</th></tr></thead>
+            <tbody>
+            {% for t in transactions %}
+                <tr>
+                    <td>{{ t.date|date:"d.m.Y" }}</td>
+                    <td>{{ t.register.name }}</td>
+                    <td>{{ t.get_transaction_type_display }}{% if t.party %}<div class="small text-muted">{{ t.party }}</div>{% endif %}</td>
+                    <td class="text-end {% if t.amount < 0 %}text-danger{% else %}text-success{% endif %}">{{ t.amount|uzsum }}</td>
+                    <td class="small text-muted">{{ t.reference }}</td>
+                    <td class="small">{{ t.doc_notes }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-4">Harakat yo'q.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

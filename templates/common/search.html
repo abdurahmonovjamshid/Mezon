@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Qidiruv — {{ APP_NAME }}{% endblock %}
+{% block content %}
+<h4 class="mb-3">Qidiruv</h4>
+<form method="get" class="mb-4" role="search">
+    <div class="input-group input-group-lg search-page-box">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Mijoz, mahsulot, sotuv raqami..." autofocus>
+        <button class="btn btn-primary" type="submit">Qidirish</button>
+    </div>
+</form>
+
+{% if q|length < 2 %}
+    <div class="empty-state">
+        <span class="stat-icon tone-teal"><i class="bi bi-search"></i></span>
+        <p class="text-muted mb-0">Kamida 2 ta harf kiriting.</p>
+    </div>
+{% elif not groups %}
+    <div class="empty-state">
+        <span class="stat-icon tone-slate"><i class="bi bi-emoji-neutral"></i></span>
+        <p class="text-muted mb-0">"{{ q }}" bo'yicha hech narsa topilmadi.</p>
+    </div>
+{% else %}
+    <div class="row g-3">
+    {% for group in groups %}
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header"><i class="bi bi-{{ group.icon }} text-primary"></i> {{ group.title }} <span class="badge text-bg-light ms-1">{{ group.items|length }}</span></div>
+                <div class="list-group list-group-flush">
+                    {% for item in group.items %}
+                        <a href="{{ item.url }}" class="list-group-item list-group-item-action">
+                            <div class="fw-bold">{{ item.title }}</div>
+                            <div class="small text-muted">{{ item.subtitle }}</div>
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+    </div>
+{% endif %}
+{% endblock %}
