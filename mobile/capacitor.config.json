@@ -3,7 +3,7 @@
   "appName": "Mezon",
   "webDir": "www",
   "server": {
-    "url": "https://mezon.pythonanywhere.com",
+    "url": "https://mez0n.pythonanywhere.com",
     "cleartext": false
   },
   "android": {

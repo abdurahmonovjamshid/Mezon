@@ -51,6 +51,13 @@ ALLOWED_HOSTS = [
 _extra_hosts = os.environ.get('DJANGO_ALLOWED_HOSTS', '')
 ALLOWED_HOSTS += [h.strip() for h in _extra_hosts.split(',') if h.strip()]
 
+
+# Production (DEBUG=False): cookie'lar faqat HTTPS orqali yuboriladi.
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 # ngrok / PythonAnywhere orqali internetga chiqarilganda CSRF tekshiruvi
 # https bo'lgan domenlarga ishonishi uchun kerak.
 CSRF_TRUSTED_ORIGINS = [
