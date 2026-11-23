@@ -65,6 +65,7 @@ NAV_GROUPS = [
         'title': 'Tahlil',
         'items': [
             {'label': 'Hisobotlar', 'icon': 'bar-chart-line', 'url': 'reports:index', 'match': ('reports', None, ())},
+            {'label': 'Harakatlar jurnali', 'icon': 'clock-history', 'url': 'audit:list', 'match': ('audit', None, ())},
         ],
     },
 ]

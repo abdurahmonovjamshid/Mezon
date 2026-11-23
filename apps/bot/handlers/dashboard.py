@@ -25,6 +25,11 @@ from apps.suppliers.models import Supplier
 
 @register_menu(keyboards.MENU_DASHBOARD)
 def dashboard(message, tg_user):
+    bot.send_message(message.chat.id, dashboard_text())
+
+
+def dashboard_text():
+    """Dashboard matni — bot menyusi va kunlik hisobot uchun umumiy."""
     today = timezone.localdate()
 
     todays_sales = Sale.objects.filter(date=today, status=Sale.Status.CONFIRMED)
@@ -86,4 +91,4 @@ def dashboard(message, tg_user):
         for name, qty in stock_rows[:10]:
             lines.append(f'   • {escape(name)} — {kg(qty)}')
 
-    bot.send_message(message.chat.id, '\n'.join(lines))
+    return '\n'.join(lines)

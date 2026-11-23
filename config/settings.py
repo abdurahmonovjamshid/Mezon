@@ -94,6 +94,7 @@ INSTALLED_APPS = [
     'apps.reports',
     'apps.dashboard',
     'apps.bot',
+    'apps.audit',
 ]
 
 # --- Telegram bot ---
@@ -121,6 +122,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'apps.audit.middleware.AuditMiddleware',
     'apps.accounts.middleware.RoleAccessMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',

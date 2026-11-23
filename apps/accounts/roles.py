@@ -17,7 +17,7 @@ KASSIR = 'Kassir'
 
 SECTIONS = (
     'dashboard', 'sales', 'customers', 'purchases', 'suppliers', 'products',
-    'inventory', 'butchering', 'kassa', 'payments', 'expenses', 'reports',
+    'inventory', 'butchering', 'kassa', 'payments', 'expenses', 'reports', 'audit',
 )
 
 ROLE_SECTIONS = {
