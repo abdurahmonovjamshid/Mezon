@@ -13,6 +13,7 @@ from apps.bot import keyboards
 from apps.bot.bot_instance import bot
 from apps.bot.models import TgUser
 from apps.bot.state import dispatch_callback, dispatch_text
+from apps.bot.webapp import send_webapp_button
 
 MENU_ROUTES = {}
 COMMAND_ROUTES = {}
@@ -92,6 +93,7 @@ def on_text(message):
             "🛍 Savdo · 📥 Xarid · 🏬 Ombor · 👛 Moliya · 📊 Hisobotlar",
             reply_markup=keyboards.main_menu(),
         )
+        send_webapp_button(message.chat.id)
         return
 
     if message.text == keyboards.CANCEL_TEXT:
