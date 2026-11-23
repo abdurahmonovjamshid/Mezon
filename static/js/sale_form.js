@@ -54,6 +54,7 @@
         const payFullBtn = document.getElementById('pay-full');
         const payHalfBtn = document.getElementById('pay-half');
         if (!catalogEl || !totalFormsInput) return;
+        const allowNegative = !!data.allowNegativeStock;
 
         let currentGrandTotal = 0;
 
@@ -136,7 +137,7 @@
             const showOOS = !!(showOutOfStockEl && showOutOfStockEl.checked);
             let filtered = products.filter((p) => checkedCategories.has(p.category));
             if (q) filtered = filtered.filter((p) => p.name.toLowerCase().includes(q));
-            if (!showOOS) {
+            if (!showOOS && !allowNegative) {
                 filtered = filtered.filter((p) => remainingStock(p) > 0 || cartQtyFor(p.id) > 0);
             }
             catalogEl.innerHTML = '';
@@ -144,7 +145,9 @@
             filtered.forEach((p) => {
                 const remaining = remainingStock(p);
                 const remainingPcs = remainingPieces(p);
-                const stockText = remaining <= 0 ? "Omborda yo'q" : `${formatStock(remaining)} ${p.unit} / ${remainingPcs} dona mavjud`;
+                const stockText = remaining <= 0 && !allowNegative
+                    ? "Omborda yo'q"
+                    : `${formatStock(remaining)} ${p.unit} / ${remainingPcs} dona ${remaining < 0 ? '(minusda)' : 'mavjud'}`;
                 const stockClass = remaining <= 0 ? 'text-danger' : 'text-muted';
                 const inCartQty = cartQtyFor(p.id);
                 const inCartPcs = cartPiecesFor(p.id);
@@ -182,7 +185,7 @@
                         return;
                     }
                     const avail = remainingStock(p);
-                    if (qty > avail) {
+                    if (!allowNegative && qty > avail) {
                         errorEl.textContent = avail > 0
                             ? `Omborda faqat ${formatStock(avail)} ${p.unit} bor.`
                             : "Bu mahsulot omborda yo'q.";
@@ -191,7 +194,7 @@
                         return;
                     }
                     const availPcs = remainingPieces(p);
-                    if (pieces > availPcs) {
+                    if (!allowNegative && pieces > availPcs) {
                         errorEl.textContent = `Omborda faqat ${availPcs} dona bor.`;
                         errorEl.classList.remove('d-none');
                         piecesInput.focus();
@@ -288,11 +291,11 @@
                     const product = products.find((pp) => pp.id === item.productId);
                     const stock = product ? (parseFloat(product.stock) || 0) : Infinity;
                     const stockPcs = product ? (parseInt(product.stock_pieces, 10) || 0) : Infinity;
-                    if (item.quantity > stock) {
+                    if (!allowNegative && item.quantity > stock) {
                         alert(`Omborda faqat ${formatStock(stock)} ${item.unit} bor. Miqdor shunga moslashtirildi.`);
                         item.quantity = stock;
                     }
-                    if (item.pieces > stockPcs) {
+                    if (!allowNegative && item.pieces > stockPcs) {
                         alert(`Omborda faqat ${stockPcs} dona bor. Soni shunga moslashtirildi.`);
                         item.pieces = stockPcs;
                     }

@@ -3,7 +3,7 @@ from io import BytesIO
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from openpyxl import Workbook, load_workbook
@@ -93,10 +93,61 @@ class MovingAverageCostTests(TestCase):
         # Qolgan 50 kg 70 000 + yangi 50 kg 60 000 -> 65 000
         self.assertEqual(inventory_service.get_weighted_average_cost(self.product), Decimal('65000.00'))
 
-    def test_empty_stock_has_zero_cost(self):
+    def test_empty_stock_keeps_last_cost(self):
+        # Qoldiq tugaganda oxirgi ma'lum tannarx qoladi — minusga sotilgan
+        # tovar ham shu tannarx bilan hisoblanadi (foyda 100% bo'lib qolmaydi).
         self._in('10', '70000')
         self._out('10')
+        self.assertEqual(inventory_service.get_weighted_average_cost(self.product), Decimal('70000.00'))
+
+    def test_new_product_has_zero_cost(self):
         self.assertEqual(inventory_service.get_weighted_average_cost(self.product), Decimal('0'))
+
+
+class NegativeStockTests(TestCase):
+    """Mezon: ALLOW_NEGATIVE_STOCK yoqiq — qoldiq manfiyga tushishi mumkin."""
+
+    def setUp(self):
+        category = ProductCategory.objects.create(name='Umumiy', code='gen')
+        self.product = Product.objects.create(name='Un', code='UN', category=category)
+        self.today = timezone.localdate()
+
+    def _out(self, qty, pieces=0):
+        return inventory_service.stock_out(product=self.product, quantity=Decimal(qty), pieces=pieces,
+                                           movement_type='SALE', date=self.today,
+                                           unit_cost=inventory_service.get_weighted_average_cost(self.product))
+
+    def test_stock_goes_negative_and_recovers(self):
+        inventory_service.stock_in(product=self.product, quantity=Decimal('10'), movement_type='PURCHASE',
+                                   unit_cost=Decimal('5000'), date=self.today)
+        self._out('25', pieces=3)
+        self.assertEqual(inventory_service.get_stock(self.product), Decimal('-15'))
+        self.assertEqual(inventory_service.get_stock_pieces(self.product), -3)
+        inventory_service.stock_in(product=self.product, quantity=Decimal('20'), movement_type='PURCHASE',
+                                   unit_cost=Decimal('6000'), date=self.today)
+        self.assertEqual(inventory_service.get_stock(self.product), Decimal('5'))
+
+    def test_minus_sale_uses_last_cost(self):
+        inventory_service.stock_in(product=self.product, quantity=Decimal('10'), movement_type='PURCHASE',
+                                   unit_cost=Decimal('5000'), date=self.today)
+        self._out('10')
+        movement = self._out('4')
+        self.assertEqual(movement.unit_cost, Decimal('5000.00'))
+
+    def test_sale_from_empty_stock_via_service(self):
+        from apps.customers.models import Customer
+        from apps.sales.models import Sale, SaleItem
+        from apps.sales.services import sale_service
+        sale = Sale.objects.create(customer=Customer.objects.create(name='Ali'), date=self.today, sale_number='S-NEG-1')
+        SaleItem.objects.create(sale=sale, product=self.product, quantity=Decimal('3'), price=Decimal('1000'))
+        sale_service.confirm_sale(sale)
+        self.assertEqual(inventory_service.get_stock(self.product), Decimal('-3'))
+
+    @override_settings(ALLOW_NEGATIVE_STOCK=False)
+    def test_strict_mode_still_rejects(self):
+        from django.core.exceptions import ValidationError
+        with self.assertRaises(ValidationError):
+            self._out('1')
 
 
 class StockTransferTests(TestCase):
@@ -127,11 +178,13 @@ class StockTransferTests(TestCase):
         self.assertEqual(inventory_service.get_stock(self.product), Decimal('100'))
         self.assertEqual(inventory_service.get_weighted_average_cost(self.product), Decimal('70000.00'))
 
+    @override_settings(ALLOW_NEGATIVE_STOCK=False)  # qat'iy rejim: qoldiqdan ortiq chiqim taqiqlanadi
     def test_cannot_transfer_more_than_warehouse_stock(self):
         from django.core.exceptions import ValidationError
         with self.assertRaises(ValidationError):
             self._transfer('150')
 
+    @override_settings(ALLOW_NEGATIVE_STOCK=False)  # qat'iy rejim: qoldiqdan ortiq chiqim taqiqlanadi
     def test_sale_from_second_warehouse_checks_its_stock(self):
         from django.core.exceptions import ValidationError
         self._transfer('30')

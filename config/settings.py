@@ -101,6 +101,9 @@ INSTALLED_APPS = [
 APP_NAME = os.environ.get('APP_NAME', 'Mezon')
 APP_TAGLINE = os.environ.get('APP_TAGLINE', "Savdo va ombor boshqaruvi")
 
+# Ombor qoldig'i manfiyga tushishi mumkinmi (tovar hali kirim qilinmay sotilishi).
+ALLOW_NEGATIVE_STOCK = os.environ.get('ALLOW_NEGATIVE_STOCK', 'True') == 'True'
+
 from config.unfold import build_unfold_config  # noqa: E402
 
 UNFOLD = build_unfold_config(APP_NAME, APP_TAGLINE)

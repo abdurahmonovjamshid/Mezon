@@ -99,8 +99,8 @@ class Butchering(models.Model):
             raise ValidationError('Input vazn musbat bolishi kerak.')
         if self.output_weight > self.input_weight:
             raise ValidationError('Output inputdan katta bolmasligi kerak.')
-        if self.input_product_id:
-            from apps.inventory.services import inventory_service
+        from apps.inventory.services import inventory_service
+        if self.input_product_id and not inventory_service.negative_stock_allowed():
             warehouse = inventory_service.resolve_warehouse(self.warehouse)
             available = inventory_service.get_stock(self.input_product, warehouse)
             if self.input_weight > available:

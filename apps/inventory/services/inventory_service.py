@@ -25,6 +25,11 @@ def _movements(product, warehouse=None):
     return qs
 
 
+def negative_stock_allowed() -> bool:
+    from django.conf import settings
+    return getattr(settings, 'ALLOW_NEGATIVE_STOCK', False)
+
+
 def get_stock(product, warehouse=None) -> Decimal:
     """Mahsulotning joriy ombor qoldig'ini (kg) qaytaradi (Total IN - Total OUT).
     `warehouse` berilmasa barcha omborlar bo'yicha jami qoldiq."""
@@ -85,20 +90,23 @@ def get_weighted_average_cost(product) -> Decimal:
         StockMovement.objects.filter(product=product)
         .order_by('id').values_list('direction', 'quantity', 'unit_cost')
     )
+    last_avg = Decimal('0')  # qoldiq tugaganda (yoki manfiy bo'lganda) shu ishlatiladi
     for direction, quantity, unit_cost in movements:
         if direction == StockMovement.Direction.IN:
             if qty <= 0:
                 qty, value = Decimal('0'), Decimal('0')
             qty += quantity
             value += quantity * unit_cost
+            if qty > 0:
+                last_avg = value / qty
         else:
-            avg = value / qty if qty > 0 else Decimal('0')
+            avg = value / qty if qty > 0 else last_avg
             qty -= quantity
             value -= quantity * avg
             if qty <= 0:
                 qty, value = Decimal('0'), Decimal('0')
     if qty <= 0:
-        return Decimal('0')
+        return last_avg.quantize(Decimal('0.01'))
     return (value / qty).quantize(Decimal('0.01'))
 
 
@@ -130,7 +138,8 @@ def stock_in(*, product, quantity, movement_type, date, unit_cost=Decimal('0'),
 
 def stock_out(*, product, quantity, movement_type, date, unit_cost=Decimal('0'),
               pieces=0, reference='', created_by=None, warehouse=None) -> StockMovement:
-    """Ombordan chiqim yaratadi. Qoldiq yetarli bo'lmasa xatolik beradi."""
+    """Ombordan chiqim yaratadi. `ALLOW_NEGATIVE_STOCK` o'chiq bo'lsa, qoldiq
+    yetarli bo'lmaganda xatolik beradi; yoqiq bo'lsa qoldiq manfiyga tushadi."""
     if quantity is None or quantity < 0:
         raise ValidationError('Ombor miqdori manfiy bolmasligi kerak.')
     if pieces is None or pieces < 0:
@@ -139,14 +148,14 @@ def stock_out(*, product, quantity, movement_type, date, unit_cost=Decimal('0'),
         raise ValidationError("Miqdor (kg) yoki dona sonidan kamida bittasi musbat bolishi kerak.")
 
     warehouse = resolve_warehouse(warehouse)
-    available = get_stock(product, warehouse)
-    if quantity > available:
+    if negative_stock_allowed():
+        pass
+    elif quantity > (available := get_stock(product, warehouse)):
         raise ValidationError(
             f"Omborda ({warehouse.name}) yetarli mahsulot mavjud emas. "
             f"Mavjud qoldiq: {available} {product.unit} ({product.name})"
         )
-    available_pieces = get_stock_pieces(product, warehouse)
-    if pieces > available_pieces:
+    if not negative_stock_allowed() and pieces > (available_pieces := get_stock_pieces(product, warehouse)):
         raise ValidationError(
             f"Omborda ({warehouse.name}) yetarli dona/bo'lak mavjud emas. "
             f"Mavjud qoldiq: {available_pieces} dona ({product.name})"
@@ -333,6 +342,8 @@ def cancel_transfer(transfer: StockTransfer, *, user=None) -> StockTransfer:
     if transfer.status != StockTransfer.Status.CONFIRMED:
         raise ValidationError('Faqat CONFIRMED holatidagi kochirishni bekor qilish mumkin.')
     for item in transfer.items.select_related('product'):
+        if negative_stock_allowed():
+            break
         available = get_stock(item.product, transfer.to_warehouse)
         if item.quantity > available:
             raise ValidationError(

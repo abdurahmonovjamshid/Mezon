@@ -8,7 +8,7 @@ from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from apps.bot.handlers import butchering as butchering_handlers
 from apps.bot.handlers import expenses as expense_handlers
@@ -134,6 +134,7 @@ class SaleFlowTests(TestCase):
         self.assertEqual(sale.total_amount, Decimal('5') * Decimal('95000'))
         self.assertEqual(inventory_service.get_stock(self.product), Decimal('5'))
 
+    @override_settings(ALLOW_NEGATIVE_STOCK=False)  # qat'iy rejim: qoldiqdan ortiq chiqim taqiqlanadi
     def test_confirm_rejects_oversell(self, mock_req):
         mock_req.side_effect = _fake_response
         self.tg_user.data['items'][0]['quantity'] = '999'
@@ -443,6 +444,7 @@ class WarehouseFlowTests(TestCase):
         self.assertEqual(sale.warehouse, self.second)
         self.assertEqual(inventory_service.get_stock(self.product, self.second), Decimal('6'))
 
+    @override_settings(ALLOW_NEGATIVE_STOCK=False)  # qat'iy rejim: qoldiqdan ortiq chiqim taqiqlanadi
     def test_sale_from_empty_warehouse_is_rejected(self, mock_req):
         mock_req.side_effect = _fake_response
         sale_handlers.confirm_sale(_fake_call(), self._sale_user(self.main, '4'))

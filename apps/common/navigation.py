@@ -82,6 +82,7 @@ def _is_active(match, namespace, url_name):
 def navigation(request):
     """Shablonlar uchun: brend nomi va faol band belgilangan menyu guruhlari."""
     context = {
+        'allow_negative_stock': getattr(settings, 'ALLOW_NEGATIVE_STOCK', False),
         'APP_NAME': settings.APP_NAME,
         'APP_TAGLINE': settings.APP_TAGLINE,
     }

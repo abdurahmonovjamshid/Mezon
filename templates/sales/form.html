@@ -116,11 +116,12 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/picker.js' %}?v=3"></script>
-<script src="{% static 'js/sale_form.js' %}?v=3"></script>
+<script src="{% static 'js/picker.js' %}?v=4"></script>
+<script src="{% static 'js/sale_form.js' %}?v=4"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         window.SaleFormInit({
+            allowNegativeStock: {{ allow_negative_stock|yesno:'true,false' }},
             products: {{ products_json|safe }},
             customers: {{ customers_json|safe }},
             initialCart: {{ initial_cart_json|safe }},

@@ -152,12 +152,13 @@
 
 {% block extra_js %}
 {% load static %}
-<script src="{% static 'js/formset.js' %}?v=3"></script>
-<script src="{% static 'js/picker.js' %}?v=3"></script>
-<script src="{% static 'js/butchering_form.js' %}?v=3"></script>
+<script src="{% static 'js/formset.js' %}?v=4"></script>
+<script src="{% static 'js/picker.js' %}?v=4"></script>
+<script src="{% static 'js/butchering_form.js' %}?v=4"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         window.ButcheringFormInit({
+            allowNegativeStock: {{ allow_negative_stock|yesno:'true,false' }},
             products: {{ products_json|safe }},
             specifications: {{ specifications_json|safe }},
             initialOutputs: {{ outputs_json|safe }},

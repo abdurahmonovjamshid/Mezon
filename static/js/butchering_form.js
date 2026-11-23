@@ -33,7 +33,7 @@
         return `${p.category_label || p.category || ''} ${p.name}`;
     }
 
-    window.ButcheringFormInit = function ({ products, specifications, initialOutputs, formsetPrefix, expenseFormsetPrefix }) {
+    window.ButcheringFormInit = function ({ products, specifications, initialOutputs, formsetPrefix, expenseFormsetPrefix, allowNegativeStock }) {
         specifications = specifications || [];
         const attachSearchPicker = window.attachSearchPicker;
         const inputProductSelect = document.querySelector('[data-role="input-product-select"]');
@@ -77,8 +77,8 @@
                     const stock = parseFloat(product.stock) || 0;
                     const stockPieces = parseInt(product.stock_pieces, 10) || 0;
                     headerStock.textContent = `Ombor qoldig'i: ${formatStock(stock)} kg / ${stockPieces} dona`;
-                    if (inputWeightInput) inputWeightInput.max = stock;
-                    if (inputPiecesInput) inputPiecesInput.max = stockPieces;
+                    if (inputWeightInput && !allowNegativeStock) inputWeightInput.max = stock;
+                    if (inputPiecesInput && !allowNegativeStock) inputPiecesInput.max = stockPieces;
                 } else {
                     headerStock.textContent = "Ombor qoldig'i: —";
                     if (inputWeightInput) inputWeightInput.removeAttribute('max');
@@ -90,7 +90,7 @@
         // Kiritilgan vazn/son ombor qoldig'idan oshib ketsa, qoldiqqa moslashtiradi.
         function clampInputToStock() {
             const product = inputProductSelect ? productById(products, inputProductSelect.value) : null;
-            if (!product) return;
+            if (!product || allowNegativeStock) { updateHeader(); recalcOutputs(); return; }
             const stock = parseFloat(product.stock) || 0;
             const stockPieces = parseInt(product.stock_pieces, 10) || 0;
             if (inputWeightInput) {
