@@ -112,6 +112,7 @@ def index(request):
 
     kassa_balances = cash_service.get_balances()
     low_stock = low_stock_products()
+    inventory_diff = inventory_service.inventory_difference(today.replace(day=1), today)
 
     context = {
         'today': today,
@@ -135,6 +136,7 @@ def index(request):
         'kassa_balances': kassa_balances,
         'low_stock': low_stock[:8],
         'low_stock_total': len(low_stock),
+        'inventory_diff': inventory_diff,
         'top_customers_labels': json.dumps(top_customers_labels),
         'top_customers_values': json.dumps(top_customers_values),
         'top_suppliers_labels': json.dumps(top_suppliers_labels),
